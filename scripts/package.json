@@ -1,0 +1,14 @@
+{
+  "name": "blacket-tracker-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "fetch": "bun run fetch.ts"
+  },
+  "dependencies": {
+    "@softfault/blacketjs": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1"
+  }
+}
