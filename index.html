@@ -411,8 +411,7 @@ let activeChart  = null; // Chart.js instance — destroyed before re-creating
 // history.json sits one level up from /site/ in /data/
 async function loadData() {
   try {
-    const res = await fetch("/data/history.json");
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const res = await fetch("/Blacket-Bazaar-Tracker/data/history.json");    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     allHistory = await res.json();
 
