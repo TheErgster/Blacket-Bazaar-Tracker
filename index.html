@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blacket Bazaar Tracker</title>
+
+  <!-- Chart.js for the price history charts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+  <style>
+    /* ── Design tokens ──────────────────────────────────────────
+       Dark theme that feels native to a card/pack game.
+       Accent is a warm gold — fits "tokens" and "value" mentally.
+    ── */
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface-2:   #22263a;
+      --border:      #2e334d;
+      --accent:      #f5c842;
+      --accent-dim:  #b8962e;
+      --text:        #e8eaf0;
+      --text-muted:  #7c8099;
+      --green:       #4ade80;
+      --red:         #f87171;
+      --radius:      10px;
+      --card-size:   140px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    header h1 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--accent);
+      white-space: nowrap;
+    }
+
+    /* ── Search bar ─────────────────────────────────────────── */
+    #search-wrapper {
+      flex: 1;
+      min-width: 200px;
+      max-width: 400px;
+      position: relative;
+    }
+
+    #search {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      padding: 8px 14px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    #search:focus {
+      border-color: var(--accent);
+    }
+
+    /* ── Status bar ─────────────────────────────────────────── */
+    #status {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    /* ── Sort controls ──────────────────────────────────────── */
+    #controls {
+      padding: 12px 24px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #controls span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-right: 4px;
+    }
+
+    .sort-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .sort-btn:hover, .sort-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: rgba(245, 200, 66, 0.08);
+    }
+
+    /* ── Blook grid ─────────────────────────────────────────── */
+    #grid {
+      display: grid;
+      /* Auto-fill as many cards as fit, min 140px each */
+      grid-template-columns: repeat(auto-fill, minmax(var(--card-size), 1fr));
+      gap: 12px;
+      padding: 20px 24px;
+    }
+
+    /* ── Individual blook card ──────────────────────────────── */
+    .blook-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px 8px 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: border-color 0.15s, transform 0.1s, background 0.15s;
+      user-select: none;
+    }
+
+    .blook-card:hover {
+      border-color: var(--accent);
+      background: var(--surface-2);
+      transform: translateY(-2px);
+    }
+
+    /* Blook image — Blacket serves these from /content/blooks/<name>.png */
+    .blook-img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      /* Show a subtle placeholder while loading */
+      background: var(--surface-2);
+      border-radius: 6px;
+    }
+
+    .blook-name {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-align: center;
+      /* Clip long names to two lines */
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      line-height: 1.3;
+      min-height: 2.2em;
+    }
+
+    .blook-price {
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent);
+    }
+
+    .blook-count {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Empty / loading states ─────────────────────────────── */
+    #empty-msg {
+      grid-column: 1 / -1;
+      text-align: center;
+      color: var(--text-muted);
+      padding: 60px 0;
+      font-size: 0.9rem;
+    }
+
+    /* ── Modal overlay ──────────────────────────────────────── */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    #modal-overlay.open {
+      display: flex;
+    }
+
+    /* ── Modal box ──────────────────────────────────────────── */
+    #modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      width: 100%;
+      max-width: 680px;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 24px;
+      position: relative;
+    }
+
+    #modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.4rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    #modal-close:hover { color: var(--text); }
+
+    #modal-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    #modal-img {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+    }
+
+    #modal-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
+
+    #modal-stats {
+      display: flex;
+      gap: 20px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .stat-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-value {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+
+    /* ── Price chart ────────────────────────────────────────── */
+    #chart-container {
+      position: relative;
+      height: 260px;
+      margin-top: 8px;
+    }
+
+    /* ── Time range toggle ──────────────────────────────────── */
+    #range-controls {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .range-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .range-btn:hover, .range-btn.active {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ── No data message inside modal ───────────────────────── */
+    #modal-no-data {
+      text-align: center;
+      color: var(--text-muted);
+      padding: 40px 0;
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ────────────────────────────────────────────────── -->
+<header>
+  <h1>Blacket Bazaar</h1>
+  <div id="search-wrapper">
+    <input id="search" type="text" placeholder="Search blooks…" autocomplete="off" />
+  </div>
+  <div id="status">Loading…</div>
+</header>
+
+<!-- ── Sort controls ─────────────────────────────────────────── -->
+<div id="controls">
+  <span>Sort by:</span>
+  <button class="sort-btn active" data-sort="name">Name</button>
+  <button class="sort-btn" data-sort="price-asc">Price ↑</button>
+  <button class="sort-btn" data-sort="price-desc">Price ↓</button>
+  <button class="sort-btn" data-sort="listings">Most Listed</button>
+</div>
+
+<!-- ── Blook grid ─────────────────────────────────────────────── -->
+<div id="grid">
+  <div id="empty-msg">Loading price data…</div>
+</div>
+
+<!-- ── Price history modal ────────────────────────────────────── -->
+<div id="modal-overlay">
+  <div id="modal">
+    <button id="modal-close">✕</button>
+    <div id="modal-header">
+      <img id="modal-img" src="" alt="" />
+      <div>
+        <div id="modal-title"></div>
+        <div id="modal-stats">
+          <div class="stat">
+            <span class="stat-label">Lowest Ask</span>
+            <span class="stat-value" id="stat-low"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Avg Price</span>
+            <span class="stat-value" id="stat-avg"></span>
+          </div>
+          <div class="stat">
+            <span class="stat-label">Listings</span>
+            <span class="stat-value" id="stat-count"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Time range selector for the chart -->
+    <div id="range-controls">
+      <button class="range-btn" data-hours="6">6h</button>
+      <button class="range-btn" data-hours="24">24h</button>
+      <button class="range-btn active" data-hours="168">7d</button>
+      <button class="range-btn" data-hours="720">30d</button>
+      <button class="range-btn" data-hours="0">All</button>
+    </div>
+
+    <div id="chart-container">
+      <canvas id="price-chart"></canvas>
+    </div>
+    <div id="modal-no-data" style="display:none;">
+      Not enough data yet — check back after a few snapshots have been collected.
+    </div>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  Blacket Bazaar Tracker — Frontend
+//
+//  Data flow:
+//    1. Fetch ../data/history.json (committed by GitHub Actions)
+//    2. Read the most recent snapshot for current prices
+//    3. Render a card grid, sorted/filtered per user input
+//    4. On card click, open a modal with a Chart.js price history
+// ════════════════════════════════════════════════════════════════
+
+// ── State ────────────────────────────────────────────────────────
+let allHistory   = [];   // full array of { timestamp, prices } snapshots
+let latestPrices = {};   // { "Blook Name": { lowestAsk, avgPrice, listingCount } }
+let currentSort  = "name";
+let currentQuery = "";
+let activeChart  = null; // Chart.js instance — destroyed before re-creating
+
+// ── Load data ────────────────────────────────────────────────────
+// history.json sits one level up from /site/ in /data/
+async function loadData() {
+  try {
+    const res = await fetch("/data/history.json");
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    allHistory = await res.json();
+
+    if (allHistory.length === 0) {
+      document.getElementById("empty-msg").textContent =
+        "No snapshots yet — the GitHub Action hasn't run. Trigger it manually in the Actions tab.";
+      document.getElementById("status").textContent = "No data";
+      return;
+    }
+
+    // Most recent snapshot = last element in the array
+    const latest = allHistory[allHistory.length - 1];
+    latestPrices = latest.prices;
+
+    const date = new Date(latest.timestamp);
+    document.getElementById("status").textContent =
+      `Updated ${date.toLocaleTimeString()} · ${allHistory.length} snapshots`;
+
+    renderGrid();
+  } catch (err) {
+    document.getElementById("empty-msg").textContent =
+      `Failed to load data: ${err.message}`;
+    document.getElementById("status").textContent = "Error";
+    console.error(err);
+  }
+}
+
+// ── Render the blook card grid ───────────────────────────────────
+function renderGrid() {
+  const grid = document.getElementById("grid");
+
+  // Build list of { name, ...price data } and apply search filter
+  let items = Object.entries(latestPrices)
+    .map(([name, data]) => ({ name, ...data }))
+    .filter(item =>
+      !currentQuery || item.name.toLowerCase().includes(currentQuery.toLowerCase())
+    );
+
+  // Sort
+  switch (currentSort) {
+    case "name":
+      items.sort((a, b) => a.name.localeCompare(b.name));
+      break;
+    case "price-asc":
+      items.sort((a, b) => a.lowestAsk - b.lowestAsk);
+      break;
+    case "price-desc":
+      items.sort((a, b) => b.lowestAsk - a.lowestAsk);
+      break;
+    case "listings":
+      items.sort((a, b) => b.listingCount - a.listingCount);
+      break;
+  }
+
+  if (items.length === 0) {
+    grid.innerHTML = `<div id="empty-msg">No blooks match "${currentQuery}"</div>`;
+    return;
+  }
+
+  // Build card HTML for each item
+  grid.innerHTML = items.map(item => `
+    <div class="blook-card" data-name="${escapeAttr(item.name)}">
+      <img
+        class="blook-img"
+        src="https://blacket.org/content/blooks/${encodeURIComponent(item.name)}.png"
+        alt="${escapeAttr(item.name)}"
+        onerror="this.src='https://blacket.org/content/blooks/Default.png'"
+      />
+      <div class="blook-name">${escapeHtml(item.name)}</div>
+      <div class="blook-price">${formatTokens(item.lowestAsk)}</div>
+      <div class="blook-count">${item.listingCount} listed</div>
+    </div>
+  `).join("");
+
+  // Wire up click handlers on each card
+  grid.querySelectorAll(".blook-card").forEach(card => {
+    card.addEventListener("click", () => openModal(card.dataset.name));
+  });
+}
+
+// ── Open the price history modal ─────────────────────────────────
+function openModal(blookName) {
+  const data = latestPrices[blookName];
+  if (!data) return;
+
+  // Fill in header info
+  document.getElementById("modal-title").textContent = blookName;
+  document.getElementById("modal-img").src =
+    `https://blacket.org/content/blooks/${encodeURIComponent(blookName)}.png`;
+  document.getElementById("modal-img").onerror = function() {
+    this.src = "https://blacket.org/content/blooks/Default.png";
+  };
+  document.getElementById("stat-low").textContent   = formatTokens(data.lowestAsk);
+  document.getElementById("stat-avg").textContent   = formatTokens(data.avgPrice);
+  document.getElementById("stat-count").textContent = data.listingCount;
+
+  // Default to 7-day view
+  document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
+  document.querySelector(".range-btn[data-hours='168']").classList.add("active");
+
+  document.getElementById("modal-overlay").classList.add("open");
+  renderChart(blookName, 168);
+}
+
+// ── Render (or re-render) the Chart.js price chart ───────────────
+function renderChart(blookName, hours) {
+  // Destroy any existing chart instance so Chart.js doesn't complain
+  if (activeChart) {
+    activeChart.destroy();
+    activeChart = null;
+  }
+
+  // Filter snapshots to the chosen time range
+  const cutoff = hours === 0 ? 0 : Date.now() - hours * 60 * 60 * 1000;
+  const filtered = allHistory.filter(snap =>
+    snap.timestamp >= cutoff && snap.prices[blookName]
+  );
+
+  const noDataEl = document.getElementById("modal-no-data");
+  const chartContainer = document.getElementById("chart-container");
+
+  if (filtered.length < 2) {
+    noDataEl.style.display = "block";
+    chartContainer.style.display = "none";
+    return;
+  }
+
+  noDataEl.style.display = "none";
+  chartContainer.style.display = "block";
+
+  const labels     = filtered.map(s => new Date(s.timestamp).toLocaleString());
+  const lowAsks    = filtered.map(s => s.prices[blookName].lowestAsk);
+  const avgPrices  = filtered.map(s => s.prices[blookName].avgPrice);
+
+  const ctx = document.getElementById("price-chart").getContext("2d");
+
+  activeChart = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Lowest Ask",
+          data: lowAsks,
+          borderColor: "#f5c842",
+          backgroundColor: "rgba(245,200,66,0.08)",
+          borderWidth: 2,
+          pointRadius: filtered.length > 100 ? 0 : 3, // hide dots if too many points
+          tension: 0.3,
+          fill: true,
+        },
+        {
+          label: "Avg Price",
+          data: avgPrices,
+          borderColor: "#7c8099",
+          backgroundColor: "transparent",
+          borderWidth: 1.5,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          tension: 0.3,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: "#7c8099", font: { size: 11 } }
+        },
+        tooltip: {
+          callbacks: {
+            // Format tooltip values with token symbol
+            label: ctx => ` ${ctx.dataset.label}: ${formatTokens(ctx.parsed.y)}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: "#7c8099",
+            font: { size: 10 },
+            maxTicksLimit: 8,     // don't cram 100 labels on the x-axis
+            maxRotation: 0,
+          },
+          grid: { color: "#2e334d" }
+        },
+        y: {
+          ticks: {
+            color: "#7c8099",
+            font: { size: 10 },
+            callback: val => formatTokens(val),
+          },
+          grid: { color: "#2e334d" }
+        }
+      }
+    }
+  });
+}
+
+// ── Event listeners ──────────────────────────────────────────────
+
+// Search input
+document.getElementById("search").addEventListener("input", e => {
+  currentQuery = e.target.value.trim();
+  renderGrid();
+});
+
+// Sort buttons
+document.querySelectorAll(".sort-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".sort-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentSort = btn.dataset.sort;
+    renderGrid();
+  });
+});
+
+// Close modal on overlay click or close button
+document.getElementById("modal-overlay").addEventListener("click", e => {
+  if (e.target === document.getElementById("modal-overlay")) closeModal();
+});
+document.getElementById("modal-close").addEventListener("click", closeModal);
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+  if (activeChart) { activeChart.destroy(); activeChart = null; }
+}
+
+// Time range buttons inside modal
+document.querySelectorAll(".range-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".range-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    const name = document.getElementById("modal-title").textContent;
+    renderChart(name, parseInt(btn.dataset.hours));
+  });
+});
+
+// ── Helpers ──────────────────────────────────────────────────────
+
+// Format a token number nicely: 1234 → "1,234 🪙"
+function formatTokens(n) {
+  return n.toLocaleString() + " 🪙";
+}
+
+// Escape HTML to prevent XSS from blook names
+function escapeHtml(str) {
+  return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function escapeAttr(str) {
+  return str.replace(/"/g, "&quot;");
+}
+
+// ── Kick everything off ──────────────────────────────────────────
+loadData();
+</script>
+</body>
+</html>
