@@ -1,33 +1,18 @@
-// ============================================================
-// fetch.ts — Blacket Bazaar Price Tracker
-// Runs on a schedule via GitHub Actions. Hits /worker/bazaar,
-// finds the lowest listing price per item, and appends a
-// timestamped snapshot to ../data/history.json
-// ============================================================
 
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve } from "path";
 
-// ── Auth ─────────────────────────────────────────────────────
-// The cookie comes from GitHub Secrets (BLACKET_COOKIE).
-// When your session expires (usually after a few days of inactivity),
-// the Action will start failing. To fix: log into Blacket, grab the
-// cookie from any request in your Network tab, update the secret.
+
 const cookie = process.env.COOKIES;
 if (!cookie) {
     throw new Error("Missing COOKIES env var — did you set the GitHub Secret?");
 }
 
-// ── Fetch bazaar listings ────────────────────────────────────
-// We use raw fetch instead of the SDK here so we can set browser-like
-// headers. Blacket's server checks these and rejects requests that look
-// too bot-shaped (no referer, wrong user-agent, etc.)
 console.log("Fetching bazaar listings...");
 
 const response = await fetch("https://blacket.org/worker/bazaar", {
     headers: {
         "Cookie": cookie,
-        // Mimic what a real browser sends so the server doesn't reject us
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Referer": "https://blacket.org/",
         "Origin": "https://blacket.org",
@@ -59,12 +44,7 @@ if (res.error) {
 
 console.log(`Got ${res.bazaar.length} listings`);
 
-// ── Reduce listings → one price per item ────────────────────
-// Multiple sellers can list the same item at different prices.
-// We track TWO prices per item:
-//   lowestAsk  = cheapest listing right now (best buy price)
-//   avgPrice   = average across all listings (smooths out outliers)
-// Both are useful — lowest is most "real", average is more stable.
+
 
 const itemGroups: Record<string, number[]> = {};
 
@@ -89,9 +69,7 @@ for (const [item, listings] of Object.entries(itemGroups)) {
 
 console.log(`Processed ${Object.keys(prices).length} unique items`);
 
-// ── Load existing history and append snapshot ────────────────
-// history.json lives one level up in /data/history.json relative
-// to this scripts/ folder. The path resolves to the repo root's /data/.
+
 const historyPath = resolve("../data/history.json");
 
 type Snapshot = {

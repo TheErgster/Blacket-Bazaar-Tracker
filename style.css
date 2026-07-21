@@ -1,0 +1,324 @@
+/* fully stole blacket fonts
+Also most of the stuff here is one for one from all.css in blackets code
+
+*/
+@font-face {
+    font-family: "Quicksand";
+    src: url("https://blacket.org/content/fonts/Quicksand.ttf") format("opentype");
+    font-weight: 500;
+    font-style: normal;
+}
+
+:root {
+    --bg:         #1e1e1e;
+    --surface:    #2f2f2f;
+    --surface-2:  #3a3a3a;
+    --surface-3:  #343232;
+    --border:     rgba(0, 0, 0, 0.25);
+    --inset:      rgba(0, 0, 0, 0.2);   
+    --accent:     #f5c842;               
+    --text:       #ffffff;
+    --text-muted: rgba(255, 255, 255, 0.5);
+    --radius:     0.365vw;              
+    --radius-lg:  0.521vw;
+    --card-size:  140px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    min-height: 100vh;
+}
+
+
+header {
+    background: var(--surface);
+    box-shadow: inset 0 -0.260vw var(--inset); 
+    padding: 0.8vw 1.5vw;
+    display: flex;
+    align-items: center;
+    gap: 1vw;
+    flex-wrap: wrap;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+header h1 {
+    font-size: 1.3vw;
+    font-weight: 700;
+    color: var(--text);
+    white-space: nowrap;
+}
+
+#search-wrapper {
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+#search {
+    width: 100%;
+    background: var(--surface-2);
+    border: 0.104vw solid var(--border);
+    box-shadow: inset 0 -0.208vw var(--inset);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 0.4vw 0.8vw;
+    font-size: 0.85vw;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    outline: none;
+    transition: border-color 0.15s;
+}
+
+#search::placeholder {
+    color: var(--text-muted);
+}
+
+#search:focus {
+    border-color: var(--accent);
+}
+
+#status {
+    font-size: 0.75vw;
+    color: var(--text-muted);
+    margin-left: auto;
+    white-space: nowrap;
+}
+
+#controls {
+    padding: 0.5vw 1.5vw;
+    display: flex;
+    gap: 0.4vw;
+    flex-wrap: wrap;
+    align-items: center;
+    background: var(--surface-3);
+    box-shadow: inset 0 -0.208vw var(--inset);
+}
+
+#controls span {
+    font-size: 0.75vw;
+    color: var(--text-muted);
+    margin-right: 0.2vw;
+}
+
+.sort-btn {
+    background: var(--surface-2);
+    border: 0.104vw solid var(--border);
+    box-shadow: inset 0 -0.208vw var(--inset);
+    color: var(--text-muted);
+    padding: 0.3vw 0.8vw;
+    border-radius: 999px;
+    font-size: 0.75vw;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.sort-btn:hover {
+    color: var(--text);
+    background: var(--surface);
+}
+
+.sort-btn.active {
+    background: var(--accent);
+    border-color: transparent;
+    box-shadow: inset 0 -0.208vw rgba(0,0,0,0.15);
+    color: #1a1a1a;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(var(--card-size), 1fr));
+    gap: 0.8vw;
+    padding: 1vw 1.5vw;
+}
+
+.blook-card {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    box-shadow: inset 0 -0.313vw var(--inset);
+    padding: 0.8vw 0.5vw 0.6vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4vw;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.15s;
+    user-select: none;
+    border: 0.104vw solid var(--border);
+}
+
+.blook-card:hover {
+    background: var(--surface-2);
+    transform: translateY(-2px);
+}
+
+.blook-img {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    border-radius: 0.3vw;
+}
+
+.blook-name {
+    font-size: 0.65vw;
+    color: var(--text-muted);
+    text-align: center;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.3;
+    min-height: 2.2em;
+}
+
+.blook-price {
+    font-size: 0.9vw;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.blook-count {
+    font-size: 0.6vw;
+    color: var(--text-muted);
+}
+
+#empty-msg {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--text-muted);
+    padding: 4vw 0;
+    font-size: 0.85vw;
+}
+
+#modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+#modal-overlay.open {
+    display: flex;
+}
+
+#modal {
+    background: var(--surface);
+    border: 0.104vw solid var(--border);
+    box-shadow: inset 0 -0.313vw var(--inset);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 680px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1.5vw;
+    position: relative;
+}
+
+#modal-close {
+    position: absolute;
+    top: 0.8vw;
+    right: 1vw;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    cursor: pointer;
+    line-height: 1;
+    font-family: 'Quicksand', sans-serif;
+}
+
+#modal-close:hover { color: var(--text); }
+
+#modal-header {
+    display: flex;
+    align-items: center;
+    gap: 1vw;
+    margin-bottom: 1vw;
+}
+
+#modal-img {
+    width: 80px;
+    height: 80px;
+    object-fit: contain;
+}
+
+#modal-title {
+    font-size: 1.2vw;
+    font-weight: 700;
+}
+
+#modal-stats {
+    display: flex;
+    gap: 1.5vw;
+    margin-top: 0.4vw;
+    flex-wrap: wrap;
+}
+
+.stat { display: flex; flex-direction: column; }
+
+.stat-label {
+    font-size: 0.6vw;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.stat-value {
+    font-size: 0.9vw;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+#chart-container {
+    position: relative;
+    height: 260px;
+    margin-top: 0.5vw;
+}
+
+#range-controls {
+    display: flex;
+    gap: 0.4vw;
+    margin-bottom: 0.8vw;
+}
+
+.range-btn {
+    background: var(--surface-2);
+    border: 0.104vw solid var(--border);
+    box-shadow: inset 0 -0.208vw var(--inset);
+    color: var(--text-muted);
+    padding: 0.25vw 0.7vw;
+    border-radius: var(--radius);
+    font-size: 0.7vw;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.range-btn:hover { color: var(--text); }
+
+.range-btn.active {
+    background: var(--accent);
+    border-color: transparent;
+    color: #1a1a1a;
+    box-shadow: inset 0 -0.208vw rgba(0,0,0,0.15);
+}
+
+#modal-no-data {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 2vw 0;
+    font-size: 0.8vw;
+}

@@ -28,9 +28,7 @@ jobs:
         run: bun run fetch.ts
         working-directory: scripts
         env:
-          # Store your Blacket session cookie in GitHub Secrets:
-          # Repo → Settings → Secrets and variables → Actions → New repository secret
-          # Name it BLACKET_COOKIE, paste your cookie value
+
           COOKIES: ${{ secrets.BLACKET_COOKIE }}
 
       - name: Commit updated price data
