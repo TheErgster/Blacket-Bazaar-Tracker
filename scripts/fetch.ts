@@ -5,7 +5,6 @@
 // timestamped snapshot to ../data/history.json
 // ============================================================
 
-import { BlacketClient } from "@softfault/blacketjs";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { resolve } from "path";
 
@@ -19,14 +18,29 @@ if (!cookie) {
     throw new Error("Missing COOKIES env var — did you set the GitHub Secret?");
 }
 
-const client = new BlacketClient({ cookie });
-
 // ── Fetch bazaar listings ────────────────────────────────────
-// This is the raw endpoint the site itself calls. It returns a flat
-// array of all current listings across all items — not grouped by item.
+// We use raw fetch instead of the SDK here so we can set browser-like
+// headers. Blacket's server checks these and rejects requests that look
+// too bot-shaped (no referer, wrong user-agent, etc.)
 console.log("Fetching bazaar listings...");
 
-const res = await client.get<{
+const response = await fetch("https://blacket.org/worker/bazaar", {
+    headers: {
+        "Cookie": cookie,
+        // Mimic what a real browser sends so the server doesn't reject us
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Referer": "https://blacket.org/",
+        "Origin": "https://blacket.org",
+        "Accept": "application/json, text/plain, */*",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+});
+
+if (!response.ok) {
+    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+}
+
+const res = await response.json() as {
     error: boolean;
     reason?: string;
     bazaar: Array<{
@@ -37,7 +51,7 @@ const res = await client.get<{
         sellerId: number;
         date: number;     // unix timestamp (seconds)
     }>;
-}>("/worker/bazaar");
+};
 
 if (res.error) {
     throw new Error(`Bazaar fetch failed: ${res.reason ?? "unknown error"}`);
